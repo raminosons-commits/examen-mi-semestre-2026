@@ -1,0 +1,870 @@
+openapi: 3.0.3
+info:
+  title: API École de Formation
+  version: 1.0.0
+  description: API REST pour gérer les étudiants, formateurs, cours, inscriptions, génération de description IA et webhook de paiement.
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Serveur local
+
+tags:
+  - name: Authentification
+  - name: Students
+  - name: Courses
+  - name: Instructors
+  - name: Enrollments
+  - name: Webhooks
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Authentification]
+      summary: Connexion
+      description: Retourne un token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /students:
+    get:
+      tags: [Students]
+      summary: Liste des étudiants
+      description: Liste paginée avec filtre par nom
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            example: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            example: 15
+        - in: query
+          name: name
+          schema:
+            type: string
+            example: tino
+      responses:
+        '200':
+          description: Liste paginée des étudiants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentsPaginatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Students]
+      summary: Créer un étudiant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentInput'
+      responses:
+        '201':
+          description: Étudiant créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /students/{id}:
+    get:
+      tags: [Students]
+      summary: Détail d'un étudiant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détail de l'étudiant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Students]
+      summary: Modifier un étudiant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentInput'
+      responses:
+        '200':
+          description: Étudiant mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Students]
+      summary: Supprimer un étudiant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Supprimé avec succès
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: Liste des cours
+      description: Filtre par instructor_id et tri par price
+      security: []
+      parameters:
+        - in: query
+          name: instructor_id
+          schema:
+            type: integer
+            example: 1
+        - in: query
+          name: sort
+          schema:
+            type: string
+            example: price
+        - in: query
+          name: direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            example: asc
+      responses:
+        '200':
+          description: Liste des cours
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoursesResponse'
+    post:
+      tags: [Courses]
+      summary: Créer un cours
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseInput'
+      responses:
+        '201':
+          description: Cours créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /courses/{id}:
+    get:
+      tags: [Courses]
+      summary: Détail d'un cours
+      description: Retourne aussi le formateur et le nombre d'enrollments
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détail du cours
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Courses]
+      summary: Modifier un cours
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseInput'
+      responses:
+        '200':
+          description: Cours mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Courses]
+      summary: Supprimer un cours
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Supprimé avec succès
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Suppression bloquée si des enrollments actifs existent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /courses/{id}/generate-description:
+    post:
+      tags: [Courses]
+      summary: Générer une description marketing
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Description générée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: OpenAI indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /courses/{id}/description:
+    get:
+      tags: [Courses]
+      summary: Retourner la description générée
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Description trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instructors:
+    get:
+      tags: [Instructors]
+      summary: Liste des formateurs
+      security: []
+      responses:
+        '200':
+          description: Liste des formateurs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstructorsResponse'
+    post:
+      tags: [Instructors]
+      summary: Créer un formateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructorInput'
+      responses:
+        '201':
+          description: Formateur créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstructorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /enrollments:
+    get:
+      tags: [Enrollments]
+      summary: Liste des enrollments
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, active, completed]
+        - in: query
+          name: payment_status
+          schema:
+            type: string
+            enum: [unpaid, paid]
+      responses:
+        '200':
+          description: Liste des enrollments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Enrollments]
+      summary: Inscrire un étudiant à un cours
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentInput'
+      responses:
+        '201':
+          description: Enrollment créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Doublon d'inscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /enrollments/{id}/complete:
+    patch:
+      tags: [Enrollments]
+      summary: Passer le statut à completed
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Enrollment complété
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhooks/payment:
+    post:
+      tags: [Webhooks]
+      summary: Webhook de paiement
+      description: Vérifie la signature HMAC-SHA256 et met à jour l'enrollment
+      security: []
+      parameters:
+        - in: header
+          name: X-Webhook-Signature
+          required: false
+          schema:
+            type: string
+            example: sha256=abc123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookPaymentInput'
+      responses:
+        '200':
+          description: Paiement reçu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSuccessResponse'
+        '401':
+          description: Signature invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Erreur de validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    LoginRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          example: lindo@email.com
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+        message:
+          type: string
+
+    StudentInput:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        enrolled_at:
+          type: string
+          format: date-time
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        enrolled_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    StudentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Student'
+        message:
+          type: string
+
+    StudentDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Student'
+            - type: object
+              properties:
+                enrollments:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Enrollment'
+        message:
+          type: string
+
+    StudentsPaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+        message:
+          type: string
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            current_page:
+              type: integer
+            last_page:
+              type: integer
+            per_page:
+              type: integer
+
+    InstructorInput:
+      type: object
+      required: [name, email, specialty]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        specialty:
+          type: string
+
+    Instructor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        specialty:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    InstructorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Instructor'
+        message:
+          type: string
+
+    InstructorsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instructor'
+        message:
+          type: string
+
+    CourseInput:
+      type: object
+      required: [title, price, duration_hours, instructor_id]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        duration_hours:
+          type: integer
+        instructor_id:
+          type: integer
+
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price:
+          type: number
+        duration_hours:
+          type: integer
+        instructor_id:
+          type: integer
+        generated_description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CourseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Course'
+        message:
+          type: string
+
+    CourseDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+            title:
+              type: string
+            description:
+              type: string
+              nullable: true
+            price:
+              type: number
+            duration_hours:
+              type: integer
+            instructor_id:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+            Instructor:
+              $ref: '#/components/schemas/Instructor'
+            nb_enrollments:
+              type: integer
+        message:
+          type: string
+
+    CoursesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Course'
+        message:
+          type: string
+
+    EnrollmentInput:
+      type: object
+      required: [student_id, course_id]
+      properties:
+        student_id:
+          type: integer
+        course_id:
+          type: integer
+
+    Enrollment:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        course_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, active, completed]
+        payment_status:
+          type: string
+          enum: [unpaid, paid]
+        created_at:
+          type: string
+          format: date-time
+
+    EnrollmentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Enrollment'
+        message:
+          type: string
+
+    EnrollmentsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Enrollment'
+        message:
+          type: string
+
+    DescriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            description:
+              type: string
+        message:
+          type: string
+
+    WebhookPaymentInput:
+      type: object
+      required: [event, data]
+      properties:
+        event:
+          type: string
+          example: payment.succeeded
+        data:
+          type: object
+          required: [enrollment_id, amount, currency, paid_at]
+          properties:
+            enrollment_id:
+              type: integer
+            amount:
+              type: number
+            currency:
+              type: string
+            paid_at:
+              type: string
+              format: date-time
+
+    WebhookSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        received:
+          type: boolean
+          example: true
